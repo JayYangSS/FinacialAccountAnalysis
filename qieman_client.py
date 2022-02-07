@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import time
 import re
+import pickle
 import requests
 
 
@@ -116,7 +117,6 @@ class QiemanClient(Clients):
             time.sleep(0.5)
 
     def getAssets(self):
-
         self.browser.find_element(By.XPATH,'//*[@id="app"]/div[4]/div/div[2]/div/section/a').click()
         WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="app"]/div[4]/main/div/div/div/div[3]')))
 
@@ -165,8 +165,8 @@ class QiemanClient(Clients):
             time.sleep(1)#强制等待
             #WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.ID, 'app')))
 
-        fund_df=pd.DataFrame(fund_list,columns=['基金代码','基金名称','基金持仓'],dtype=float)
-
+        fund_df=pd.DataFrame(fund_list,columns=['基金代码','基金名称','基金持仓'])
+        print('爬取基金持仓信息完毕！')
         return fund_df
 
 
@@ -193,24 +193,29 @@ if __name__=='__main__':
 
     #账户信息
     home_url = 'https://qieman.com/'
-    user_name = 'xxxxx'
-    passwd = 'xxxxxxx'
+    user_name = 'xxxxxxx'
+    passwd = 'xxxxxx'
 
-    qieman=QiemanClient(headless=False,home_url=home_url,user_name=user_name,passwd=passwd)
+    qieman=QiemanClient(headless=True,home_url=home_url,user_name=user_name,passwd=passwd)
     qieman.login()
     fund_df=qieman.getAssets()#获取基金持仓信息
 
+    #with open('fund_df.pkl','wb') as df_data_file:
+    #    pickle.dump(fund_df,df_data_file)
 
-    #数据存储
-    data_analyser=DataAnalyser('且慢基金持仓.xlsx')
-    data_analyser.save(fund_df)
+    # with open('fund_df.pkl','rb') as df_data_file:
+    #     fund_df=pickle.load(df_data_file)
 
-    #数据加载
-    #fund_df=pd.read_excel('且慢基金持仓.xlsx')
-    #group=fund_df.groupby('基金代码').agg({'基金持仓':'sum'})
 
-    #data_analyser=DataAnalyser('且慢基金持仓v2.xlsx')
-    #data_analyser.save(group)
 
+    #数据统计
+    print('统计分析持仓数据.....')
+    group=fund_df.groupby('基金代码').agg({'基金持仓':'sum'})
+    fund_name_with_code_df=fund_df.iloc[:,0:2]
+    grouped_fund_info=fund_name_with_code_df.merge(group,how='right',on='基金代码').drop_duplicates(subset=['基金代码'],keep='first')
+
+    sorted_grouped_fund_info=grouped_fund_info.sort_values(by='基金持仓',ascending=False)#按持仓市值降序排列
+    data_analyser=DataAnalyser('且慢基金持仓v4.xlsx')
+    data_analyser.save(sorted_grouped_fund_info)
 
     print('Done!')
