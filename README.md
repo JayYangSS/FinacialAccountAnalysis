@@ -39,7 +39,7 @@ python qieman_client.py
 
 
 # TODO
-
+- [x] 易方达账户信息统计
 - [x] 且慢账户信息统计
 - [ ] 广发账户信息统计
 

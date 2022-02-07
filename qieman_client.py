@@ -175,22 +175,56 @@ class QiemanClient(Clients):
 
 
 class DataAnalyser():
-    def __init__(self,excel_path):
+    def __init__(self,excel_path,pd_df):
         self.excel_writer = pd.ExcelWriter(excel_path, engine="xlsxwriter")
         self.excel_path = excel_path
+        self.pd_df=pd_df
+        self.processed_df=None
+        self.total_asset_val=None
 
+    def analysis(self):
+        # 数据统计
+        print('统计分析持仓数据.....')
+        group = self.pd_df.groupby('基金代码').agg({'基金持仓': 'sum'})
+        fund_name_with_code_df = self.pd_df.iloc[:, 0:2]
+        grouped_fund_info = fund_name_with_code_df.merge(group, how='right', on='基金代码').drop_duplicates(subset=['基金代码'],keep='first')
+        self.total_asset_val=grouped_fund_info['基金持仓'].sum()
 
-    def save(self,data_frame,startrow=0):
-        data_frame.to_excel(self.excel_writer,startrow=startrow,index=False,header=True)
+        sorted_grouped_fund_info = grouped_fund_info.sort_values(by='基金持仓', ascending=False)  # 按持仓市值降序排列
+        ratio = sorted_grouped_fund_info['基金持仓'] / self.total_asset_val  # 计算持仓比例
+        ratio.rename('持仓占比', inplace=True)
+        self.processed_df = pd.concat([sorted_grouped_fund_info, ratio], axis=1)  # 按列合并持仓占比信息
+        self._save()
+
+    def _save(self,startrow=0):
+        sheet_name='且慢持仓汇总'
+        rows, cols = self.processed_df.shape
+        self.processed_df.to_excel(self.excel_writer,sheet_name=sheet_name,startrow=startrow,index=False,header=True)
+
+        # 高亮显示账户总市值
+        bold = self.excel_writer.book.add_format({
+            'bold': True,  # 字体加粗
+            'border': 1,  # 单元格边框宽度
+            'align': 'right',  # 水平对齐方式
+            'valign': 'vcenter',  # 垂直对齐方式
+            'fg_color': '#F4B084',  # 单元格背景颜色
+            'text_wrap': True,  # 是否自动换行
+        })
+
+        percent_format = self.excel_writer.book.add_format({'num_format': '0.00000%'}) #设置百分数格式
+        worksheet = self.excel_writer.sheets[sheet_name]
+        worksheet.set_column(2, 2, width=15)  # 设置表格宽度
+        worksheet.set_column(3, 3, width=15, cell_format=percent_format)  # 设置百分数格式
+        worksheet.set_column(1, 1, 30)  # 设置基金名称表格宽度
+        worksheet.write(startrow + rows + 1, 1, '账户持仓总市值', bold)
+        worksheet.write(startrow + rows + 1, 2, self.total_asset_val, bold)
+
         self.excel_writer.save()
 
 
 
 
 if __name__=='__main__':
-    html_save_path='efounds.html'#爬取的数据信息
-    excel_save_path='账户持仓.xlsx'
-
     #账户信息
     home_url = 'https://qieman.com/'
     user_name = 'xxxxxxx'
@@ -206,16 +240,7 @@ if __name__=='__main__':
     # with open('fund_df.pkl','rb') as df_data_file:
     #     fund_df=pickle.load(df_data_file)
 
-
-
-    #数据统计
-    print('统计分析持仓数据.....')
-    group=fund_df.groupby('基金代码').agg({'基金持仓':'sum'})
-    fund_name_with_code_df=fund_df.iloc[:,0:2]
-    grouped_fund_info=fund_name_with_code_df.merge(group,how='right',on='基金代码').drop_duplicates(subset=['基金代码'],keep='first')
-
-    sorted_grouped_fund_info=grouped_fund_info.sort_values(by='基金持仓',ascending=False)#按持仓市值降序排列
-    data_analyser=DataAnalyser('且慢基金持仓v4.xlsx')
-    data_analyser.save(sorted_grouped_fund_info)
+    data_analyser=DataAnalyser('且慢基金持仓v7.xlsx',fund_df)
+    data_analyser.analysis()
 
     print('Done!')
