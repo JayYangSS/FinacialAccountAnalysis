@@ -26,10 +26,14 @@ class EfoundsClient(Clients):
         password_botton.clear()
         password_botton.send_keys(self.passwd)
 
+        #勾选同意协议
+        agree_radiobox = self.browser.find_element(By.ID, "agreementRadioBox")
+        agree_radiobox.click()
+
         #提交登录信息
         submit_botton=self.browser.find_element(By.ID,"submitBtn")
         submit_botton.click()
-        self.browser.implicitly_wait(5)  # 防止页面未加载出来就执行下一步操作
+        self.browser.implicitly_wait(20)  # 防止页面未加载出来就执行下一步操作
         print('logging account sucessful!')
 
     def getAccountHTML(self,html_save_path):
@@ -48,7 +52,7 @@ class EfoundsClient(Clients):
         WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="statementsCommit"]')))
         trade_search_link = self.browser.find_element(By.XPATH,'//*[@id="statementsCommit"]')
         trade_search_link.click()
-        WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, '//table'))) # 防止页面未加载出来就执行下一步操作
+        WebDriverWait(self.browser, 20).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'tbody'))) # 防止页面未加载出来就执行下一步操作
 
         #保存html页面
         with open(html_save_path,'w',encoding='utf-8') as f:
@@ -128,7 +132,7 @@ class HTMLTableParser():
 
 if __name__=='__main__':
     html_save_path='efounds.html'#爬取的数据信息
-    excel_save_path='账户持仓.xlsx'
+    excel_save_path='账户持仓20220227.xlsx'
 
     #账户信息
     home_url = 'https://e.efunds.com.cn/'

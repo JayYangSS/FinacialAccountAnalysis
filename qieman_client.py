@@ -240,7 +240,7 @@ if __name__=='__main__':
     # with open('fund_df.pkl','rb') as df_data_file:
     #     fund_df=pickle.load(df_data_file)
 
-    data_analyser=DataAnalyser('且慢基金持仓v7.xlsx',fund_df)
+    data_analyser=DataAnalyser('且慢基金持仓_0219.xlsx',fund_df)
     data_analyser.analysis()
 
     print('Done!')
